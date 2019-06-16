@@ -43,29 +43,82 @@ void returnFromSystemCall(){
     machine->WriteRegister(NextPCReg, npc+4); // NextPC <- NextPC + 4
 }
 
-void Nachos_Halt() {                    // System call 0
+void Nachos_Halt() {             // System call 0
 
         DEBUG('a', "Shutdown, initiated by user program.\n");
         interrupt->Halt();
 
 }       // Nachos_Halt
 
-void Nachos_Open() {   // System call 5              
-    char name[100];
+/* This user program is done (status = 0 means exited normally). */
+void Nachos_Exit() {           // System call 1
+    int status = machine->ReadRegister(4);
+    
+}       // Nachos_Exit
+
+/* Run the executable, stored in the Nachos file "name", and return the 
+ * address space identifier
+ */
+void Nachos_Exec() {           // System call 2
+
+}       // Nachos_Exec
+
+/* Only return once the the user program "id" has finished.  
+ * Return the exit status.
+ */
+void Nachos_Join() {           // System call 3
+
+}       // Nachos_Join
+
+/* Create a Nachos file, with "name" */
+void Nachos_Create() {           // System call 4
     int reg4 = machine->ReadRegister(4);
+    char file_name[100] = {};
+    int buffer = 0;
+
+    //Reads in memory until end of name
+    machine->ReadMem(reg4, 1, &buffer);
+    int i = 0;
+    while(buffer != '\0'){
+        file_name[i] = (char) buffer;
+        reg4++;
+        i++;
+        machine->ReadMem(reg4, 1, &buffer); 
+    }
+
+    int handle = creat(file_name, S_IRWXG);
+    if(handle != -1){
+        close(handle);
+        machine->WriteRegister(2, handle);
+    }
+    else{
+        machine->WriteRegister(2,-1);
+    }
+    
+    returnFromSystemCall();
+}       // Nachos_Create
+
+/* Open the Nachos file "name", and return an "OpenFileId" that can 
+ * be used to read and write to the file.
+ */
+void Nachos_Open() {            // System call 5              
+    int reg4 = machine->ReadRegister(4);
+    char file_name[100] = {};
     int buffer = 0;
     
     //Reads in memory until end of name
     machine->ReadMem(reg4, 1, &buffer);
-    for(int i=0; buffer != '\0'; i++){
-        name[i] = (char) buffer;
+    int i = 0;
+    while(buffer != '\0'){
+        file_name[i] = (char) buffer;
         reg4++;
-        machine->ReadMem(reg4, 1, &buffer);
+        i++;
+        machine->ReadMem(reg4, 1, &buffer); 
     }
 
     // Use NachosOpenFilesTable class to create a relationship
 	// between user file and unix file
-    int UnixHandle = open(name, O_RDWR);
+    int UnixHandle = open(file_name, O_RDWR);
     if(UnixHandle != -1){
         int NachosHandle = currentThread->nachostable->Open(UnixHandle);
         machine->WriteRegister(2, NachosHandle);
@@ -80,28 +133,64 @@ void Nachos_Open() {   // System call 5
 
 }       // Nachos_Open
 
-void Nachos_Write() {                   // System call 7
+/* Read "size" bytes from the open file into "buffer".  
+ * Return the number of bytes actually read -- if the open file isn't
+ * long enough, or if it is an I/O device, and there aren't enough 
+ * characters to read, return whatever is available (for I/O devices, 
+ * you should always wait until you can return at least one character).
+ */
+void Nachos_Read() {           // System call 6
+    int reg4 = machine->ReadRegister(4);  // Read address
+    int size = machine->ReadRegister(5);  // Read size to read
+    OpenFileId id = machine->ReadRegister(6); 
+    char buffer[size] = {};
+    ssize_t read_result = 0;
 
-/* System call definition described to user
-        void Write(
-		char *buffer,	// Register 4
-		int size,	// Register 5
-		 OpenFileId id	// Register 6
-	);
-*/
-        int reg4 = machine->ReadRegister(4);        
-        int size = machine->ReadRegister(5);	    // Read  size to write
-        OpenFileId id = machine->ReadRegister(6);	// Read file descriptor
-        char buffer[size] = {0};
-        int letter_buffer = 0;
+    Console->P();
+    switch (id) {
+        case ConsoleInput:
+            read_result = read(id, buffer, size);
+            machine->WriteRegister(2, read_result);
+        break;
+        case ConsoleOutput:
+            machine->WriteRegister( 2, -1 );
+        break;
+        case ConsoleError:
+            printf( "%d\n", machine->ReadRegister( 4 ) );
+        break;
+        default:
+            if(currentThread->nachostable->isOpened(id)){
+                int UnixHandle = currentThread->nachostable->getUnixHandle(id);
+                read_result = read(UnixHandle, buffer, size);
+                machine->WriteRegister(2, read_result);
+            }
+            else{
+                machine->WriteRegister(2, -1);
+            }
+        break;
+    }
+    Console->V();
 
-        // buffer = Read data from address given by user;
-        machine->ReadMem(reg4, 1, &letter_buffer);
-        for(int i=0; i<size; i++){
+    returnFromSystemCall();
+
+}       // Nachos_Read
+
+/* Write "size" bytes from "buffer" to the open file. */
+void Nachos_Write() {           // System call 7
+
+    int reg4 = machine->ReadRegister(4);        
+    int size = machine->ReadRegister(5);	    // Read  size to write
+    OpenFileId id = machine->ReadRegister(6);	// Read file descriptor
+    char buffer[size] = {};
+    int letter_buffer = 0;
+
+    // buffer = Read data from address given by user;
+    machine->ReadMem(reg4, 1, &letter_buffer);
+    for(int i=0; i<size; i++){
         buffer[i] = (char) letter_buffer;
         reg4++;
         machine->ReadMem(reg4, 1, &letter_buffer);
-        }
+    }
 
 	// Need a semaphore to synchronize access to console
 	Console->P();
@@ -110,7 +199,7 @@ void Nachos_Write() {                   // System call 7
 			machine->WriteRegister( 2, -1 );
 			break;
 		case  ConsoleOutput:
-			buffer[ size ] = 0;
+			buffer[ size ] = {};
 			printf( "%s", buffer );
 		break;
 		case ConsoleError:	// This trick permits to write integers to console
@@ -136,7 +225,68 @@ void Nachos_Write() {                   // System call 7
 
     returnFromSystemCall();		// Update the PC registers
 
-}  
+}       // Nachos_Write
+
+/* Close the file, we're done reading and writing to it. */
+void Nachos_Close() {           // System call 8
+    OpenFileId id = machine->ReadRegister(4);
+    
+    if(currentThread->nachostable->isOpened(id)){
+        int NachosHandle = currentThread->nachostable->Close(id); // NachOS close
+        int UnixHandle = currentThread->nachostable->getUnixHandle(id); 
+        int close_result = close(UnixHandle); // Unix close
+        
+        // 0 on success, -1 on error
+        if(NachosHandle == -1 && close_result == -1){
+            machine->WriteRegister(2, -1);
+        }
+        else{
+            machine->WriteRegister(2, 0);
+        } 
+    }
+    else{
+        machine->WriteRegister(2, -1);
+    }
+    
+    returnFromSystemCall();
+}       // Nachos_Close
+
+/* Fork a thread to run a procedure ("func") in the *same* address space 
+ * as the current thread.
+ */
+void Nachos_Fork() {            // System call 9
+
+}       // Nachos_Fork
+
+/* Yield the CPU to another runnable thread, whether in this address space 
+ * or not. 
+ */
+void Nachos_Yield() {           // System call 10
+    currentThread->Yield();
+    returnFromSystemCall();
+}       // Nachos_Yield
+
+/* SemCreate creates a semaphore initialized to initval value
+ * return the semaphore id
+ */
+void Nachos_SemCreate() {        // System call 11
+
+}       // Nachos_SemCreate
+
+/* SemDestroy destroys a semaphore identified by id */ 
+void Nachos_SemDestroy() {       // System call 12
+
+}       // Nachos_SemDestroy
+
+/* SemSignal signals a semaphore, awakening some other thread if necessary */
+void Nachos_SemSignal() {        // System call 13
+
+}       // Nachos_SemSignal
+
+/* SemWait waits a semaphore, some other thread may awake if one blocked */
+void Nachos_SemWait() {          // System call 14
+
+}       // Nachos_SemWait
 
 //----------------------------------------------------------------------
 // ExceptionHandler
