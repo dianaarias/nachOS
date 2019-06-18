@@ -32,6 +32,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+SemaphoreTable * semtable =  new SemaphoreTable();
 Semaphore* Console = new Semaphore("Console", 1);
 
 void returnFromSystemCall(){
@@ -53,7 +54,7 @@ void Nachos_Halt() {             // System call 0
 /* This user program is done (status = 0 means exited normally). */
 void Nachos_Exit() {           // System call 1
     int status = machine->ReadRegister(4);
-    
+
 }       // Nachos_Exit
 
 /* Run the executable, stored in the Nachos file "name", and return the 
@@ -270,17 +271,38 @@ void Nachos_Yield() {           // System call 10
  * return the semaphore id
  */
 void Nachos_SemCreate() {        // System call 11
-
+    int value = machine->ReadRegister(4);
+    char * name = new char[50];
+    sprintf(name, "Semaphore %d", semtable->find());
+    Semaphore *semaphore = new Semaphore("New Sem", value);
+    int handle = semtable->Create((long)new Semaphore(name, value));
+    if(handle == -1){
+        machine->WriteRegister(2,-1);
+    }
+    else{
+        machine->WriteRegister(2, handle);
+    }
+    returnFromSystemCall();
 }       // Nachos_SemCreate
 
 /* SemDestroy destroys a semaphore identified by id */ 
 void Nachos_SemDestroy() {       // System call 12
+    int sem_value = machine->ReadRegister(4);
+    int handle = semtable->Destroy(sem_value);
+    if(handle == -1){
+        machine->WriteRegister(2,-1);
+    }
+    else{
+        machine->WriteRegister(2,handle);
+    }
 
+    returnFromSystemCall();
 }       // Nachos_SemDestroy
 
 /* SemSignal signals a semaphore, awakening some other thread if necessary */
 void Nachos_SemSignal() {        // System call 13
-
+    int sem_value = machine->ReadRegister(4);
+    
 }       // Nachos_SemSignal
 
 /* SemWait waits a semaphore, some other thread may awake if one blocked */
@@ -332,12 +354,45 @@ ExceptionHandler(ExceptionType which)
           switch ( type ) {
              case SC_Halt:
                 Nachos_Halt();             // System call # 0
+                break;
+             case SC_Exit:
+                Nachos_Exit();
+                break;
+             case SC_Exec:
+                Nachos_Exec();
+                break;
+             case SC_Join:
+                Nachos_Join();
                 break;  
              case SC_Open:
                 Nachos_Open();             // System call # 5
                 break;
              case SC_Write:
                 Nachos_Write();             // System call # 7
+                break;
+             case SC_Read:
+                Nachos_Read();
+                break;
+             case SC_Create:
+                Nachos_Create();
+                break;
+             case SC_Fork:
+                Nachos_Fork();
+                break;
+             case SC_Yield:
+                Nachos_Yield();
+                break;
+             case SC_SemCreate:
+                Nachos_SemCreate();
+                break;
+             case SC_SemDestroy:
+                Nachos_SemDestroy();
+                break;
+             case SC_SemSignal:
+                Nachos_SemSignal();
+                break;
+             case SC_SemWait:
+                Nachos_SemWait();
                 break;
              default:
                 printf("Unexpected syscall exception %d\n", type );
