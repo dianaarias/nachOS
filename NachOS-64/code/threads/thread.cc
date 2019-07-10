@@ -19,7 +19,7 @@
 #include "switch.h"
 #include "synch.h"
 #include "system.h"
-#include "nachostable.h"
+//#include "nachostable.h"
 
 // this is put at the top of the execution stack,
 // for detecting stack overflows

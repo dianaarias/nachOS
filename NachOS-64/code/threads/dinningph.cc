@@ -63,7 +63,7 @@ void DinningPh::print()
 }
 
 /// --------------------------------
-
+/*
 NorthPole::NorthPole()
 {
     ws = new Lock("ws");
@@ -81,7 +81,7 @@ NorthPole::NorthPole()
 
 NorthPole::~NorthPole() {}
 
-//Sincronization for workshop entrance
+//Synchronization for workshop entrance
 void NorthPole::enter(long elf)
 {
     ws->Acquire();
@@ -94,7 +94,7 @@ void NorthPole::enter(long elf)
     ws->Release();
 }
 
-//Sincronization for workshop exit
+//Synchronization for workshop exit
 void NorthPole::exit(long elf)
 {
     ws->Acquire();
@@ -204,7 +204,7 @@ bool NorthPole::isFull(int *workshop)
 //Determines when there is room for one in workshop
 //This means workshop must be neither full nor empty
 bool NorthPole::theresRoom(int *workshop)
-{ 
+{
     bool indeed = false;
     if (!isEmpty(workshop) && !isFull(workshop))
     {
@@ -215,7 +215,7 @@ bool NorthPole::theresRoom(int *workshop)
 
 //Checks who is in currently working in workshop
 int NorthPole::whosThere(int *workshop)
-{ 
+{
     if (theresRoom(workshop))
     {
         if (workshop[0] == -1)
@@ -232,7 +232,7 @@ int NorthPole::whosThere(int *workshop)
 //Determines position new elf needs to go to
 //Assumes there's room for one more in workshop
 int NorthPole::whereTo(int *workshop)
-{ 
+{
     if (workshop[0] == -1)
     {
         return 0;
@@ -245,7 +245,7 @@ int NorthPole::whereTo(int *workshop)
 
 //Removes elf from workshop
 void NorthPole::removeFromWS(long elf, int *workshop)
-{ 
+{
     if (workshop[0] == elf)
     {
         workshop[0] = -1;
@@ -258,7 +258,7 @@ void NorthPole::removeFromWS(long elf, int *workshop)
 
 //Puts elf in its place
 void NorthPole::enterWS(long elf, int *workshop)
-{ 
+{
     if (!isEmpty(workshop))//if there's another elf on the workshop
     {
         workshop[whereTo(workshop)] = elf;
@@ -273,3 +273,4 @@ void NorthPole::enterWS(long elf, int *workshop)
     }
 }
 
+*/
