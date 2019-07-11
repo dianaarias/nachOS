@@ -1,15 +1,15 @@
 #include "nachostable.h"
 
 NachosOpenFilesTable::NachosOpenFilesTable(){
-    openFiles = new int[256];
-    openFilesMap = new BitMap(256);
+    openFiles = new int[OPEN_FILE_TABLE_SIZE];
+    openFilesMap = new BitMap(OPEN_FILE_TABLE_SIZE);
     usage = 0;
 
     for(int i=0; i<3; i++){
         openFiles[i] = i;
         openFilesMap->Mark(i);
     }
-    for(int i=3; i < 256; i++){
+    for(int i=3; i < OPEN_FILE_TABLE_SIZE; i++){
         openFiles[i] = -1;
     }
 }
@@ -23,7 +23,7 @@ int NachosOpenFilesTable::Open(int UnixHandle){
     int pos = openFilesMap->Find();
     if(pos != -1){
         openFiles[pos] = UnixHandle;
-    } 
+    }
     return pos;
 }
 

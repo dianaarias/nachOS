@@ -32,8 +32,13 @@ SynchDisk   *synchDisk;
 
 #ifdef USER_PROGRAM	// requires either FILESYS or FILESYS_STUB
 Machine* machine;	// user program memory and registers
+BitMap* execSemaphoreMap;
 BitMap* memMap;
 SemaphoreTable* semtable;
+SemaphoreTable* semaphoreJoin;
+NachosOpenFilesTable* openFilesT;
+bool joinAvailable[EXEC_N];
+int semaphoreIDVec[EXEC_N];
 #endif
 
 #ifdef NETWORK
@@ -180,11 +185,11 @@ Initialize(int argc, char **argv)
 
 #ifdef USER_PROGRAM
     machine = new Machine(debugUserProg);	// this must come first
+    execSemaphoreMap = new BitMap(EXEC_N);
 		memMap = new BitMap(NumPhysPages);
-    //semtable = new SemaphoreTable();
-		/*execJoinSemMap = new BitMap(NUM_EXEC);
-		openFilesTable = new NachosOpenFilesTable();
-    semJoin = new SemaphoresTable();*/
+    semaphoreJoin = new SemaphoreTable();
+    semtable = new SemaphoreTable();
+		openFilesT = new NachosOpenFilesTable();
 #endif
 
 #ifdef FILESYS
@@ -219,6 +224,10 @@ Cleanup()
 
 #ifdef USER_PROGRAM
     delete machine;
+    delete execSemaphoreMap;
+    delete semaphoreJoin;
+    delete openFilesT;
+    delete semtable;
 		delete memMap;
 #endif
 
