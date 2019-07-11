@@ -23,15 +23,15 @@
 #include "copyright.h"
 #include "system.h"
 #include "syscall.h"
-#include "nachostable.h"
 #include "synch.h"
+#include "nachostable.h"
+
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 
-//SemaphoreTable* console =  new SemaphoreTable();
 Semaphore* Console = new Semaphore("Console", 1);
 
 void returnFromSystemCall(){
@@ -51,15 +51,57 @@ void Nachos_Halt() {             // System call 0
 }       // Nachos_Halt
 
 /* This user program is done (status = 0 means exited normally). */ //REVISAR
-void Nachos_Exit() {           // System call 1
+void Nachos_Exit() {           // System call 1 //REVISAR
     int status = machine->ReadRegister(4);
-
+    if(joinAvailable[currentThread->execID])
+    {
+       int semid = semaphoreIDVec[currentThread->execID];
+       semaphoreJoin->getSemaphore(semid)->V();
+    }
+    currentThread->Finish();
 }       // Nachos_Exit
 
 /* Run the executable, stored in the Nachos file "name", and return the
  * address space identifier
  */
+void NachosExec(void *file)
+{
+  currentThread->space = new AddrSpace((OpenFile *) file);
+
+  //Initialize registers and then load the pages table
+  currentThread->space->InitRegisters();
+  currentThread->space->RestoreState();
+
+  //Return adress is the same as calling thread
+  machine->WriteRegister(RetAddrReg, 4);
+  // run the program
+  machine->Run();
+  ASSERT(false);
+}
+
+
 void Nachos_Exec() {           // System call 2
+  ASSERT(execSemaphoreMap->NumClear() > 0); //Checks for space to joinAvailable
+  //Loads the content
+  int registerContent =machine->ReadRegister(4);
+  //Creates variables to read the path
+  char* path=new char[OPEN_FILE_TABLE_SIZE];
+  int charTaken =-1;
+  int pathIndex =0;
+  //Loads the path onto array
+  while(0!= charTaken)
+  {
+    machine->ReadMem(registerContent,1,&charTaken);
+    path[pathIndex]=(char)charTaken;
+    registerContent++;
+    pathIndex++;
+  }
+  //Uses function NachosExec in a new child thread with info obtained
+  Thread* childExec = new Thread("Child for EXEC");
+  childExec->execID = execSemaphoreMap->Find();
+  int savedChildID =childExec->execID;
+  childExec->Fork(NachosExec, (void*)fileSystem->Open(path));
+  machine->WriteRegister(2,savedChildID);
 }       // Nachos_Exec
 
 /* Only return once the the user program "id" has finished.
@@ -67,6 +109,20 @@ void Nachos_Exec() {           // System call 2
  */
 void Nachos_Join() {           // System call 3
     int id = machine->ReadRegister(4);
+    if (execSemaphoreMap->Test(id))
+    {
+      joinAvailable[id] = true;
+      int semaphoreid = semaphoreJoin->Create(0);
+      semaphoreIDVec[id] = semaphoreid;
+      semaphoreJoin->getSemaphore(semaphoreid)->P();
+      semaphoreJoin->Destroy(semaphoreid);
+      joinAvailable[id] = false;
+      execSemaphoreMap->Clear(id);
+  }
+  else
+  {
+      ASSERT(false);
+  }
 }       // Nachos_Join
 
 /* Create a Nachos file, with "name" */
@@ -252,9 +308,10 @@ void Nachos_Close() {           // System call 8
 
     returnFromSystemCall();
 }       // Nachos_Close
-/*
+
 /* Fork a thread to run a procedure ("func") in the *same* address space
   as the current thread.
+*/
 
 void ForkVoidFunction(void *registerPointer)
  {
@@ -269,15 +326,15 @@ void ForkVoidFunction(void *registerPointer)
   machine->WriteRegister(NextPCReg,(long)registerPointer+4);
   //Se ejecuta el nuevo fork en userProg.
   machine->Run();
-}*/
+}
 
 void Nachos_Fork() {            // System call 9
-/*    //Se crea el nuevo hilo por el fork
+    //Se crea el nuevo hilo por el fork
     Thread* forkingT = new Thread("Forking Thread");
     //Le provee al nuevo hilo el copia del espacio del padre
     forkingT->space = new AddrSpace(currentThread->space);
 
-    forkingT->Fork(ForkVoidFunction,(void*)machine->ReadRegister(4));*/
+    forkingT->Fork(ForkVoidFunction,(void*)machine->ReadRegister(4));
 }       // Nachos_Fork
 
 /* Yield the CPU to another runnable thread, whether in this address space

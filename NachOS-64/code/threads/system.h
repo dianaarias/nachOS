@@ -8,7 +8,7 @@
 #ifndef SYSTEM_H
 #define SYSTEM_H
 
-//#define EXEC_N 32
+#define EXEC_N 32
 
 #include "copyright.h"
 #include "utility.h"
@@ -35,13 +35,20 @@ extern Timer *timer;				// the hardware alarm clock
 
 #ifdef USER_PROGRAM
 #include "machine.h"
+
 extern Machine* machine;	// user program memory and registers
 #include "bitmap.h"
+extern BitMap *execSemaphoreMap;
 extern BitMap* memMap;
 #include "nachostable.h"
-//Exterm NachosOpenFilesTable* openFilesT
+extern NachosOpenFilesTable* openFilesT;
 #include "semtable.h"
 extern SemaphoreTable* semtable;
+extern SemaphoreTable* semaphoreJoin;
+#include <synch.h>
+extern bool joinAvailable[EXEC_N];
+extern int semaphoreIDVec[EXEC_N];
+
 #endif
 
 #ifdef FILESYS_NEEDED 		// FILESYS or FILESYS_STUB
