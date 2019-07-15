@@ -15,6 +15,7 @@
 
 #include "copyright.h"
 #include "filesys.h"
+#include <algorithm>
 
 #define UserStackSize		1024 	// increase this as necessary!
 #define StackPages      UserStackSize/PageSize
@@ -32,7 +33,7 @@ class AddrSpace {
 
     void SaveState();			// Save/restore address space-specific
     void RestoreState();		// info on a context switch
-    
+
     //For fork
     int codeSize;
     int *addrSpaceUsage;
@@ -50,8 +51,19 @@ class AddrSpace {
     //Checks when to put page on TLB and does so
     void load(int pageFault); //Catch page fault
     int goToTLB();            //Put page on TLB
+    enum PageType {TEXT,INIDAT,NONINITSTACK}; //Enumerate cases of TEXT, Initialized Data and Non initialized/Stack
+    int getSection(TranslationEntry* entry);  //Gets section from specified translation entry
+    void chooseVictim (PageType type, bool dirty, bool victim, TranslationEntry* pageEntry); //Chooses a victim for SWAP
 
+    int findMem(); //Finds a free memory space.
+    int goToMemory(); //Applies second chance and returns the chosen memory address
 
+    void ZeroOutInPageMem (TranslationEntry* outPage);// Clears memory page when chosen as victim
+  	void SwapIn (TranslationEntry* inPage, int physicalPage);//Copies pageMemory when swaping in
+  	void SwapExec (TranslationEntry* inPage);// Copies from executable file.
+
+  	void SwapOut (TranslationEntry* outPage); //Copies page out
+  	void ZeroOutOutPageMem (TranslationEntry* outPage); // Zeroes out page memory when it is swapping out.
 #endif
 
   private:
