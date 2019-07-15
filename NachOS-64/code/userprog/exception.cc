@@ -59,6 +59,7 @@ void Nachos_Exit() {           // System call 1 //REVISAR
        semaphoreJoin->getSemaphore(semid)->V();
     }
     currentThread->Finish();
+    returnFromSystemCall();
 }       // Nachos_Exit
 
 /* Run the executable, stored in the Nachos file "name", and return the
@@ -66,17 +67,20 @@ void Nachos_Exit() {           // System call 1 //REVISAR
  */
 void NachosExec(void *file)
 {
-  currentThread->space = new AddrSpace((OpenFile *) file);
+    AddrSpace *space;
+    space = currentThread->space; 
 
-  //Initialize registers and then load the pages table
-  currentThread->space->InitRegisters();
-  currentThread->space->RestoreState();
+    //Initialize registers and then load the pages table
+    space->InitRegisters();
+    space->RestoreState();
 
-  //Return adress is the same as calling thread
-  machine->WriteRegister(RetAddrReg, 4);
-  // run the program
-  machine->Run();
-  ASSERT(false);
+    //Return adress is the same as calling thread
+    machine->WriteRegister(RetAddrReg, 4);
+    machine->WriteRegister(PCReg, (long)file);
+    machine->WriteRegister(NextPCReg, (long)file+4);
+    // run the program
+    machine->Run(); //Jump to user program
+    ASSERT(false);
 }
 
 
@@ -102,6 +106,7 @@ void Nachos_Exec() {           // System call 2
   int savedChildID =childExec->execID;
   childExec->Fork(NachosExec, (void*)fileSystem->Open(path));
   machine->WriteRegister(2,savedChildID);
+  returnFromSystemCall();
 }       // Nachos_Exec
 
 /* Only return once the the user program "id" has finished.
@@ -123,6 +128,7 @@ void Nachos_Join() {           // System call 3
   {
       ASSERT(false);
   }
+  returnFromSystemCall();
 }       // Nachos_Join
 
 /* Create a Nachos file, with "name" */
@@ -317,9 +323,9 @@ void ForkVoidFunction(void *registerPointer)
  {
    //Crea un nuevo AddrSpace para el hacer el fork
   AddrSpace* newSpace;
-  newSpace = currentThread->space;
-  newSpace->InitRegisters();
-  newSpace->RestoreState();
+  newSpace = currentThread->space; 
+  newSpace->InitRegisters();    // set initial reg       
+  newSpace->RestoreState();     // load page table reg
   //Actualiza los registros para el Fork
   machine->WriteRegister(RetAddrReg,4);
   machine->WriteRegister(PCReg,(long)registerPointer);
@@ -332,9 +338,14 @@ void Nachos_Fork() {            // System call 9
     //Se crea el nuevo hilo por el fork
     Thread* forkingT = new Thread("Forking Thread");
     //Le provee al nuevo hilo el copia del espacio del padre
-    forkingT->space = new AddrSpace(currentThread->space);
-
-    forkingT->Fork(ForkVoidFunction,(void*)machine->ReadRegister(4));
+    forkingT->openFilesT = currentThread->openFilesT;
+    forkingT->semtable = currentThread->semtable;
+    forkingT->openFilesT->addThread();
+    forkingT->semtable->addThread();
+    //Llamar al override de constructor de AddrSpace: copia de padre a hijo
+    forkingT->space = new AddrSpace(currentThread->space, currentThread->space->codeSize, currentThread->space->addrSpaceUsage);
+    forkingT->Fork(ForkVoidFunction, (void *)((long) machine->ReadRegister(4)));
+    returnFromSystemCall();
 }       // Nachos_Fork
 
 /* Yield the CPU to another runnable thread, whether in this address space
@@ -386,6 +397,7 @@ void Nachos_SemSignal() {        // System call 13
     //Hacer Signal en semaforo
     sem->V();
     machine->WriteRegister(2, 1);
+    returnFromSystemCall();
 }       // Nachos_SemSignal
 
 /* SemWait waits a semaphore, some other thread may awake if one blocked */
@@ -397,6 +409,7 @@ void Nachos_SemWait() {          // System call 14
     //Hacer wait en el semaforo
     sem->P();
     machine->WriteRegister(2, 1);
+    returnFromSystemCall();
 }       // Nachos_SemWait
 
 //----------------------------------------------------------------------
@@ -422,72 +435,73 @@ void Nachos_SemWait() {          // System call 14
 //	are in machine.h.
 //----------------------------------------------------------------------
 
-void
-ExceptionHandler(ExceptionType which)
+void ExceptionHandler(ExceptionType which)
 {
-    // int type = machine->ReadRegister(2);
+    int type = machine->ReadRegister(2);
 
     // if ((which == SyscallException) && (type == SC_Halt)) {
 	// DEBUG('a', "Shutdown, initiated by user program.\n");
    	// interrupt->Halt();
     // } else {
-	// printf("Unexpected user mode exception %d %d\n", which, type);
-	// ASSERT(false);
-    // }
-
-    int type = machine->ReadRegister(2);
+	printf("SYSCALL: User mode exception %d %d\n", which, type);
+	//ASSERT(false);
+    //}
 
     switch ( which ) {
 
        case SyscallException:
           switch ( type ) {
              case SC_Halt:
-                Nachos_Halt();             // System call # 0
+                Nachos_Halt();              // System call # 0
                 break;
              case SC_Exit:
-                Nachos_Exit();
+                Nachos_Exit();              // System call # 1
                 break;
              case SC_Exec:
-                Nachos_Exec();
+                Nachos_Exec();              // System call # 2
                 break;
              case SC_Join:
-                Nachos_Join();
+                Nachos_Join();              // System call # 3
+                break;
+             case SC_Create:
+                Nachos_Create();            // System call # 4
                 break;
              case SC_Open:
-                Nachos_Open();             // System call # 5
+                Nachos_Open();              // System call # 5
+                break;
+             case SC_Read:
+                Nachos_Read();              // System call # 6
                 break;
              case SC_Write:
                 Nachos_Write();             // System call # 7
                 break;
-             case SC_Read:
-                Nachos_Read();
-                break;
-             case SC_Create:
-                Nachos_Create();
+             case SC_Close:
+                Nachos_Close();             // System call # 8
                 break;
              case SC_Fork:
-                Nachos_Fork();
+                Nachos_Fork();              // System call # 9
                 break;
              case SC_Yield:
-                Nachos_Yield();
+                Nachos_Yield();             // System call # 10
                 break;
              case SC_SemCreate:
-                Nachos_SemCreate();
+                Nachos_SemCreate();         // System call # 11
                 break;
              case SC_SemDestroy:
-                Nachos_SemDestroy();
+                Nachos_SemDestroy();        // System call # 12
                 break;
              case SC_SemSignal:
-                Nachos_SemSignal();
+                Nachos_SemSignal();         // System call # 13
                 break;
              case SC_SemWait:
-                Nachos_SemWait();
+                Nachos_SemWait();           // System call # 14
                 break;
              default:
                 printf("Unexpected syscall exception %d\n", type );
                 ASSERT(false);
                 break;
           }
+          //returnFromSystemCall();
        break;
        default:
           printf( "Unexpected exception %d\n", which );
