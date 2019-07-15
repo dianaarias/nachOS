@@ -38,6 +38,9 @@ class AddrSpace {
     int codeSize;
     int *addrSpaceUsage;
 
+    char* filename;
+    void copyName(const char* name);
+
     //Get for private atribute pageTable
     TranslationEntry* getPageTable(){
       return pageTable;

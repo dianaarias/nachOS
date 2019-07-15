@@ -3,7 +3,7 @@
 
 #include "bitmap.h"
 #include "syscall.h"
-#include "synch.h"
+
 
 class SemaphoreTable {
   public:
@@ -15,7 +15,11 @@ class SemaphoreTable {
     void addThread();		// If a user thread is using this table, add it
     void delThread();		// If a user thread is using this table, delete it
     int find();
-    Semaphore* getSemaphore(int semId);
+    int getUsage(); //Gets usage from sem table
+    bool exists( int semId ); //Returns 1 if ID is registered, else 0
+    long getSemaphore(int semId);
+    int waitingThreads;
+    void beginSemaphoreTable(long semId); //Starts a new semaphore table
 
 
   private:

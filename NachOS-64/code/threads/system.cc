@@ -34,11 +34,20 @@ SynchDisk   *synchDisk;
 Machine* machine;	// user program memory and registers
 BitMap* execSemaphoreMap;
 BitMap* memMap;
+Semaphore* bitMSem;
 SemaphoreTable* semtable;
 SemaphoreTable* semaphoreJoin;
+NachosThreadTable* runningThreadTable;
 NachosOpenFilesTable* openFilesT;
 bool joinAvailable[EXEC_N];
 int semaphoreIDVec[EXEC_N];
+#ifdef VM//////////////////////////////////////
+BitMap* swapBitMap;
+OpenFile* swap;
+TranslationEntry** ipt;
+int swapSize;
+int scMem_counter;
+#endif
 #endif
 
 #ifdef NETWORK
@@ -190,7 +199,34 @@ Initialize(int argc, char **argv)
     semaphoreJoin = new SemaphoreTable();
     semtable = new SemaphoreTable();
 		openFilesT = new NachosOpenFilesTable();
+    bitMSem = new Semaphore("BitMap", 1);
+    runningThreadTable = new NachosThreadTable();
 #endif
+#ifdef VM //////////////////////////////////////////////////////////////////////////
+	swapSize = NumPhysPages < 32 ? 64 : NumPhysPages * 2;
+	swapBitMap = new BitMap(swapSize);
+
+	int handle = creat("swap", 0777);
+
+	if (handle == -1) {
+		printf("Error creating SWAP file\n");
+		ASSERT(false);
+	} else {
+		handle = close(handle);
+		if (handle == -1) {
+			printf("Error creating SWAP file (first close)\n");
+			ASSERT(false);
+		} else {
+			DEBUG('s', "Success creating SWAP file\n");
+		}
+	}
+
+	swap = fileSystem->Open("swap");
+	scMem_counter = 0;
+
+  ipt = new TranslationEntry* [NumPhysPages];
+#endif
+
 
 #ifdef FILESYS
     synchDisk = new SynchDisk("DISK");
@@ -229,6 +265,14 @@ Cleanup()
     delete openFilesT;
     delete semtable;
 		delete memMap;
+    delete bitMSem;
+    delete runningThreadTable;
+#endif
+#ifdef VM
+	delete swapBitMap;
+  delete ipt;
+	delete swap;
+	remove("swap");
 #endif
 
 #ifdef FILESYS_NEEDED

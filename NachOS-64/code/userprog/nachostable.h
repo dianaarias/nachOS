@@ -4,7 +4,7 @@
 #include "copyright.h"
 #include "bitmap.h"
 #include "syscall.h"
-#define OPEN_FILE_TABLE_SIZE 256 
+#define OPEN_FILE_TABLE_SIZE 256
 class NachosOpenFilesTable {
   public:
     NachosOpenFilesTable();       // Initialize
@@ -16,7 +16,7 @@ class NachosOpenFilesTable {
     int getUnixHandle( int NachosHandle );
     void addThread();		// If a user thread is using this table, add it
     void delThread();		// If a user thread is using this table, delete it
-
+    int getUsage();
     void Print();               // Print contents
 
   private:

@@ -1,10 +1,11 @@
 #include "semtable.h"
-
+#define MAX_SEM 32
 SemaphoreTable::SemaphoreTable(){
     semaphores = new long[25];
     semaphore_map = new BitMap(25);
     semaphore_map->Mark(0);
-    usage = 0;
+    usage = 1;
+    waitingThreads = 0;
 }
 
 SemaphoreTable::~SemaphoreTable(){
@@ -24,7 +25,6 @@ int SemaphoreTable::Create(long sem){
 int SemaphoreTable::Destroy(int id){
     bool test = semaphore_map->Test(id);
     if(test){
-        delete  (Semaphore*)&semaphores[id];
         semaphore_map->Clear(id);
     }
     else{
@@ -49,13 +49,26 @@ int SemaphoreTable::find(){
     return sem;
 }
 
-Semaphore* SemaphoreTable::getSemaphore(int semId)
-{
-  bool test = semaphore_map->Test(semId);
-  Semaphore* semPointer;
-  if(test)
-  {
-    semPointer= (Semaphore*)& semaphores[semId];
-  }
-  return semPointer;
+int SemaphoreTable::getUsage() {
+	return usage;
+}
+
+long SemaphoreTable::getSemaphore (int semId) {
+	// Verify the handle is valid
+	if (semId < MAX_SEM && semId >= 0 && semaphore_map -> Test(semId) == true) {
+		return semaphores[semId];
+	}
+	else {
+		return 0;
+	}
+}
+
+bool SemaphoreTable::exists(int semId) {
+	// Verify the handle is valid
+  bool exists= (semId < MAX_SEM) && (semId >= 0) && (semaphore_map -> Test(semId) == true);
+	return exists;
+}
+
+void SemaphoreTable::beginSemaphoreTable(long semId) {
+	semaphores[0] = semId;
 }

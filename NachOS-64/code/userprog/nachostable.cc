@@ -57,6 +57,10 @@ void NachosOpenFilesTable::delThread(){
     usage--;
 }
 
+int NachosOpenFilesTable::getUsage() {
+	return usage;
+}
+
 void NachosOpenFilesTable::Print(){
     printf("Pos    UnixHandle    IsOpen");
     for(int i=0; i<256; i++){

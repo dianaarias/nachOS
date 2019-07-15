@@ -31,7 +31,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-
+#define BUFFERLENGTH 124
+int exitStatus = 0;
 Semaphore* Console = new Semaphore("Console", 1);
 
 void returnFromSystemCall(){
@@ -53,11 +54,30 @@ void Nachos_Halt() {             // System call 0
 /* This user program is done (status = 0 means exited normally). */ //REVISAR
 void Nachos_Exit() {           // System call 1 //REVISAR
     int status = machine->ReadRegister(4);
-    if(joinAvailable[currentThread->execID])
-    {
-       int semid = semaphoreIDVec[currentThread->execID];
-       semaphoreJoin->getSemaphore(semid)->V();
-    }
+    exitStatus = status;
+    DEBUG ('s', "Process exited with code %d\n", status);
+
+    Semaphore* waitT = (Semaphore*)(currentThread->semtable->getSemaphore(0));
+
+  	for (int i = 0;  i< currentThread->semtable->waitingThreads; i++) {
+  		waitT->V();
+  	}
+  	DEBUG( 's', "Deleting AddrSpace\n" );
+  	delete currentThread->space;
+  	currentThread->nachostable->delThread();
+  	currentThread->semtable->delThread();
+  	if ( currentThread->nachostable->getUsage() == 0) {
+  		DEBUG( 's', "Deleting open file table\n" );
+  		delete currentThread->nachostable;
+  	}
+  	if ( currentThread->nachostable->getUsage() == 0) {
+  		DEBUG( 's', "Deleting semaphore table\n");
+  		delete currentThread->semtable;
+  	}
+  	if (runningThreadTable->exists( currentThread->threadID ) ) {
+  		runningThreadTable->Destroy(currentThread->threadID);
+  	}
+
     currentThread->Finish();
     returnFromSystemCall();
 }       // Nachos_Exit
@@ -68,7 +88,7 @@ void Nachos_Exit() {           // System call 1 //REVISAR
 void NachosExec(void *file)
 {
     AddrSpace *space;
-    space = currentThread->space; 
+    space = currentThread->space;
 
     //Initialize registers and then load the pages table
     space->InitRegisters();
@@ -85,56 +105,83 @@ void NachosExec(void *file)
 
 
 void Nachos_Exec() {           // System call 2
-  ASSERT(execSemaphoreMap->NumClear() > 0); //Checks for space to joinAvailable
-  //Loads the content
-  int registerContent =machine->ReadRegister(4);
-  //Creates variables to read the path
-  char* path=new char[OPEN_FILE_TABLE_SIZE];
-  int charTaken =-1;
-  int pathIndex =0;
-  //Loads the path onto array
-  while(0!= charTaken)
-  {
-    machine->ReadMem(registerContent,1,&charTaken);
-    path[pathIndex]=(char)charTaken;
-    registerContent++;
-    pathIndex++;
-  }
-  //Uses function NachosExec in a new child thread with info obtained
-  Thread* childExec = new Thread("Child for EXEC");
-  childExec->execID = execSemaphoreMap->Find();
-  int savedChildID =childExec->execID;
-  childExec->Fork(NachosExec, (void*)fileSystem->Open(path));
-  machine->WriteRegister(2,savedChildID);
-  returnFromSystemCall();
+  DEBUG( 's', "Entering Exec System call\n" );
+	int addrs = machine->ReadRegister( 4 );
+	int buffer;
+  int buffIndex;
+	char name[BUFFERLENGTH];
+
+	machine->ReadMem(addrs, 1, &buffer);
+	/* Reads the name in memory until it finds a null character (the end of the string) */
+	for (buffIndex = 0; buffer != '\0'; buffIndex++) {
+		name[buffIndex] = (char) buffer;
+		addrs++;
+		machine->ReadMem(addrs, 1, &buffer);
+	}
+
+	/* Fills the rest of name buffer with null */
+	for (; buffIndex < BUFFERLENGTH; buffIndex++) {
+		name[buffIndex] = '\0';
+	}
+
+	DEBUG('s', "The exec buffer is %s", name);
+	OpenFile* executableFile = fileSystem->Open(name);
+
+	if ( executableFile == NULL) {
+		printf("Invalid file '%s' for execution : EXECUTE \n", name);
+		machine->WriteRegister(2, -1);
+	} else {
+		Thread * newExecutingThread = new Thread( "Exec Process" );
+		int threadID = runningThreadTable->Create(newExecutingThread);
+		if (threadID == -1) {
+			printf("No available space for a new Thread to run\n");
+			ASSERT(false);
+		}
+		newExecutingThread->threadID = threadID;
+		machine->WriteRegister(2, threadID);
+
+		newExecutingThread->space = new AddrSpace( executableFile );
+		newExecutingThread->space->copyName(name);
+		DEBUG('s', "Initializing the thread wait semaphore\n");
+		newExecutingThread->semtable->beginSemaphoreTable((long)new Semaphore("Waiting Threads Semaphore", 0));
+		DEBUG('s', "New process created with pid = %d\n", threadID);
+		//Sends the address 0 because any code segment starts at the Virtual Address 0
+		newExecutingThread->Fork( NachosExec, 0 );
+	}
+
+	returnFromSystemCall();	// This adjust the PrevPC, PC, and NextPC registers
+
+	DEBUG( 's', "Exiting Exec System call\n" );
 }       // Nachos_Exec
 
 /* Only return once the the user program "id" has finished.
  * Return the exit status.
  */
 void Nachos_Join() {           // System call 3
-    int id = machine->ReadRegister(4);
-    if (execSemaphoreMap->Test(id))
-    {
-      joinAvailable[id] = true;
-      int semaphoreid = semaphoreJoin->Create(0);
-      semaphoreIDVec[id] = semaphoreid;
-      semaphoreJoin->getSemaphore(semaphoreid)->P();
-      semaphoreJoin->Destroy(semaphoreid);
-      joinAvailable[id] = false;
-      execSemaphoreMap->Clear(id);
-  }
-  else
-  {
-      ASSERT(false);
-  }
+    int threadID = machine->ReadRegister(4);
+
+	   DEBUG('s', "Entering Join, with ID = %d\n", threadID);
+	if (runningThreadTable->exists(threadID)) {
+		Thread* newWaitingThread = runningThreadTable->getThread(threadID);
+		DEBUG('s', "The thread is now waiting for %d to finish\n", threadID);
+		Semaphore* waitSemaphore = (Semaphore*)(newWaitingThread->semtable->getSemaphore(0));
+		newWaitingThread->semtable->waitingThreads++;
+		waitSemaphore->P();
+
+		DEBUG('s', "The thread received a signal from %d, exit status is %d\n", threadID, exitStatus);
+		machine->WriteRegister(2, exitStatus);
+	} else {
+		printf("Unvalid Thread ID %d : JOIN\n", threadID);
+		machine->WriteRegister(2, -1);
+	}
+
   returnFromSystemCall();
 }       // Nachos_Join
 
 /* Create a Nachos file, with "name" */
 void Nachos_Create() {           // System call 4
     int reg4 = machine->ReadRegister(4);
-    char file_name[100] = {};
+    char file_name[BUFFERLENGTH] = {};
     int buffer = 0;
 
     //Reads in memory until end of name
@@ -164,7 +211,7 @@ void Nachos_Create() {           // System call 4
  */
 void Nachos_Open() {            // System call 5
     int reg4 = machine->ReadRegister(4);
-    char file_name[100] = {};
+    char file_name[BUFFERLENGTH] = {};
     int buffer = 0;
 
     //Reads in memory until end of name
@@ -201,35 +248,52 @@ void Nachos_Open() {            // System call 5
  * you should always wait until you can return at least one character).
  */
 void Nachos_Read() {           // System call 6
-    int reg4 = machine->ReadRegister(4);  // Read address
+    int addrs = machine->ReadRegister(4);  // Read address
     int size = machine->ReadRegister(5);  // Read size to read
+    int wBuffer;
     OpenFileId id = machine->ReadRegister(6);
-    char buffer[size] = {};
+    char* buffer = new char[size];
     ssize_t read_result = 0;
+
+    bool error =false;
 
     Console->P();
     switch (id) {
         case ConsoleInput:
-            read_result = read(id, buffer, size);
-            machine->WriteRegister(2, read_result);
+          read_result = read(id, buffer, size);
+          stats->numConsoleCharsRead++;
+          machine->WriteRegister(2, read_result);
         break;
         case ConsoleOutput:
-            machine->WriteRegister( 2, -1 );
+          machine->WriteRegister(2, -1);
+          printf( "Error: user can not read from output\n" );
+          error = true;
         break;
         case ConsoleError:
-            printf( "%d\n", machine->ReadRegister( 4 ) );
+        		error = true;
+            printf("ReadError");
         break;
         default:
             if(currentThread->nachostable->isOpened(id)){
                 int UnixHandle = currentThread->nachostable->getUnixHandle(id);
                 read_result = read(UnixHandle, buffer, size);
+                buffer[read_result] =  '\0';
                 machine->WriteRegister(2, read_result);
+                stats->numDiskReads++;
             }
             else{
                 machine->WriteRegister(2, -1);
             }
         break;
     }
+    if (!error)
+    {
+  		/* Reads the chars in memory specified by the user */
+  		wBuffer = (int)buffer[0];
+  		machine->WriteMem(addrs, 1, wBuffer);
+  		addrs++;
+	  }
+    delete buffer;
     Console->V();
 
     returnFromSystemCall();
@@ -263,6 +327,11 @@ void Nachos_Write() {           // System call 7
     case  ConsoleOutput:
 			buffer[ size ] = {};
 			printf( "%s", buffer );
+      if (buffer[size-1] != '\n')
+      {
+        fflush(stdout);
+      }
+      stats->numConsoleCharsWritten++;
 		break;
 
     case ConsoleError:	// This trick permits to write integers to console
@@ -278,6 +347,7 @@ void Nachos_Write() {           // System call 7
         int UnixHandle = currentThread->nachostable->getUnixHandle(id);
         ssize_t write_result = write(UnixHandle, buffer, size);
         machine->WriteRegister(2, write_result);
+        stats->numDiskWrites++;
       }
       else{
             machine->WriteRegister(2, -1);
@@ -287,7 +357,7 @@ void Nachos_Write() {           // System call 7
 	// Update simulation stats, see details in Statistics class in machine/stats.cc
 	Console->V();
 
-    returnFromSystemCall();		// Update the PC registers
+  returnFromSystemCall();		// Update the PC registers
 
 }       // Nachos_Write
 
@@ -323,8 +393,8 @@ void ForkVoidFunction(void *registerPointer)
  {
    //Crea un nuevo AddrSpace para el hacer el fork
   AddrSpace* newSpace;
-  newSpace = currentThread->space; 
-  newSpace->InitRegisters();    // set initial reg       
+  newSpace = currentThread->space;
+  newSpace->InitRegisters();    // set initial reg
   newSpace->RestoreState();     // load page table reg
   //Actualiza los registros para el Fork
   machine->WriteRegister(RetAddrReg,4);
@@ -332,15 +402,16 @@ void ForkVoidFunction(void *registerPointer)
   machine->WriteRegister(NextPCReg,(long)registerPointer+4);
   //Se ejecuta el nuevo fork en userProg.
   machine->Run();
+  ASSERT(false);
 }
 
 void Nachos_Fork() {            // System call 9
     //Se crea el nuevo hilo por el fork
     Thread* forkingT = new Thread("Forking Thread");
     //Le provee al nuevo hilo el copia del espacio del padre
-    forkingT->openFilesT = currentThread->openFilesT;
+    forkingT->nachostable = currentThread->nachostable;
     forkingT->semtable = currentThread->semtable;
-    forkingT->openFilesT->addThread();
+    forkingT->nachostable->addThread();
     forkingT->semtable->addThread();
     //Llamar al override de constructor de AddrSpace: copia de padre a hijo
     forkingT->space = new AddrSpace(currentThread->space, currentThread->space->codeSize, currentThread->space->addrSpaceUsage);
@@ -363,7 +434,6 @@ void Nachos_SemCreate() {        // System call 11
     int value = machine->ReadRegister(4);
     char * name = new char[50];
     sprintf(name, "Semaphore %d", semtable->find());
-    Semaphore *semaphore = new Semaphore("New Sem", value);
     int handle = semtable->Create((long)new Semaphore(name, value));
     if(handle == -1){
         machine->WriteRegister(2,-1);
@@ -391,27 +461,52 @@ void Nachos_SemDestroy() {       // System call 12
 /* SemSignal signals a semaphore, awakening some other thread if necessary */
 void Nachos_SemSignal() {        // System call 13
     int sem_value = machine->ReadRegister(4);
-    Semaphore* sem;
-    //Encontrar el semaforo en la tabla de semaforos
-    sem = semtable->getSemaphore(sem_value);
-    //Hacer Signal en semaforo
-    sem->V();
-    machine->WriteRegister(2, 1);
+    int returnVal=-1;
+    //Encuentra el semaforo en la tabla de semaforos
+    if(semtable->exists(sem_value))
+    {
+      Semaphore* sem= (Semaphore*)semtable->getSemaphore(sem_value);
+      //Hace Signal en semaforo
+      sem->V();
+      returnVal=0;
+    }
+    //Devuelve valor dependiendo de si fue exitoso(0) o no(-1)
+    machine->WriteRegister(2, returnVal);
     returnFromSystemCall();
 }       // Nachos_SemSignal
 
 /* SemWait waits a semaphore, some other thread may awake if one blocked */
 void Nachos_SemWait() {          // System call 14
-    Semaphore* sem;
+
     int sem_value = machine->ReadRegister(4);
-    //Encontrar el semaforo en tabla de semaforos
-    sem = semtable->getSemaphore(sem_value);
-    //Hacer wait en el semaforo
-    sem->P();
-    machine->WriteRegister(2, 1);
+    int returnVal=-1;
+    //Encuentra el semaforo en la tabla de semaforos
+    if (semtable->exists(sem_value))
+    {
+      Semaphore* sem=(Semaphore*)semtable->getSemaphore(sem_value);
+      //Hace Wait en semaforo
+      sem->P();
+      returnVal=0;
+    }
+    //Devuelve valor dependiendo de si fue exitoso(0) o no(-1)
+    machine->WriteRegister(2, returnVal);
     returnFromSystemCall();
 }       // Nachos_SemWait
 
+
+void PageFaultCatcher() {
+/*#ifdef VM
+	unsigned int faultAddrs = machine->ReadRegister(39);
+	DEBUG('s',"Page Fault at #%d. FaultAddrs = 0x%x Swapped Pages: %d\n", stats->numPageFaults,faultAddrs,space->pagSwap);
+	unsigned int faultPage = (unsigned) faultAddrs / PageSize;
+	int faultOffset = faultAddrs % PageSize;
+	DEBUG('s',"BadPage = %d, BadOffset = %d \n", faultPage, faultOffset);
+	space->load( faultPage );
+	stats->numPageFaults++;
+#else
+	ASSERT(false);
+#endif*/
+}
 //----------------------------------------------------------------------
 // ExceptionHandler
 // 	Entry point into the Nachos kernel.  Called when a user program
@@ -503,6 +598,9 @@ void ExceptionHandler(ExceptionType which)
           }
           //returnFromSystemCall();
        break;
+       case PageFaultException:
+			    //PageFaultCatcher();
+			    break;
        default:
           printf( "Unexpected exception %d\n", which );
           ASSERT(false);

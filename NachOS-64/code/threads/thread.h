@@ -44,6 +44,7 @@
 #include "machine.h"
 #include "addrspace.h"
 #include "nachostable.h"
+#include "semtable.h"
 #endif
 
 // CPU register state to be saved on context switch.
@@ -99,7 +100,7 @@ class Thread {
     void setStatus(ThreadStatus st) { status = st; }
     const char* getName() { return (name); }
     void Print() { printf("%s, ", name); }
-    int execID;
+
   private:
     // some of the private data for this class is listed above
 
@@ -123,8 +124,9 @@ class Thread {
   public:
     void SaveUserState();		// save user-level register state
     void RestoreUserState();		// restore user-level register state
+    int threadID;
     NachosOpenFilesTable* nachostable;
-
+    SemaphoreTable* semtable;
     AddrSpace *space;			// User code this thread is running.
 #endif
 };

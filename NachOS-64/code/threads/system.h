@@ -42,12 +42,29 @@ extern BitMap *execSemaphoreMap;
 extern BitMap* memMap;
 #include "nachostable.h"
 extern NachosOpenFilesTable* openFilesT;
+#include "threadtable.h"
+extern NachosThreadTable*    runningThreadTable;
 #include "semtable.h"
 extern SemaphoreTable* semtable;
 extern SemaphoreTable* semaphoreJoin;
 #include <synch.h>
+extern Semaphore* bitMSem;
 extern bool joinAvailable[EXEC_N];
 extern int semaphoreIDVec[EXEC_N];
+
+#ifdef VM //////////////////////////////////////////////////////////
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+extern BitMap* swapBitMap;
+extern OpenFile* swap;
+extern int swapSize;
+
+extern int scMem_counter;
+
+extern TranslationEntry** ipt;
+#endif
 
 #endif
 
