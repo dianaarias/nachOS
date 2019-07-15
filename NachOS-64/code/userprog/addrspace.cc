@@ -113,10 +113,10 @@ AddrSpace::AddrSpace(OpenFile *executable)
 		}
 	#else
 		int physicalPage;
-		physicalPage = pagesBitMap->Find();
+		physicalPage = memMap->Find();
 		for (int in = 0; in < NumPhysPages; in++)
 		{
-			DEBUG('t', "%d ", pagesBitMap->Test(in));
+			DEBUG('t', "%d ", memMap->Test(in));
 		}
 		DEBUG('t', "  %d\n", physicalPage);
 		if (physicalPage == -1) {
@@ -129,7 +129,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
 			DEBUG('A', "Assigned physical page is %d for virtual page %d\n", physicalPage, i);
 		}
 		bzero(&(machine->mainMemory[PageSize * physicalPage]), PageSize);	// Initialization of the reserved physical page
-		pagesBitMap->Mark( physicalPage );		// Marks the page as used
+		memMap->Mark( physicalPage );		// Marks the page as used
 		pageTable[i].valid = true;
 	#endif
 		pageTable[i].use = false;
@@ -203,9 +203,9 @@ AddrSpace::AddrSpace(AddrSpace *space, int fatherCodePageSize, int *fatherAddrUs
 		pageTable[i].valid = false;
 		pageTable[i].inExec = false;
 	#else
-		physicalPage = pagesBitMap->Find();
+		physicalPage = memMap->Find();
 		for (int in = 0; in < NumPhysPages; in++)
-			DEBUG('t', "%d ", pagesBitMap->Test(in));
+			DEBUG('t', "%d ", memMap->Test(in));
 		DEBUG('t', "  %d\n", physicalPage);
 		if (physicalPage == -1) {
 			printf("No available space for the program : ABORT\n");
@@ -215,7 +215,7 @@ AddrSpace::AddrSpace(AddrSpace *space, int fatherCodePageSize, int *fatherAddrUs
 			DEBUG('A', "Assigned physical page is %d for virtual page %d\n",physicalPage, i);
 		}
 		bzero(&(machine->mainMemory[PageSize * physicalPage]), PageSize);	// Initialization of the reserved physical page
-		pagesBitMap->Mark( physicalPage );		// Marks the page as used
+		memMap->Mark( physicalPage );		// Marks the page as used
 		pageTable[i].valid = true;
 	#endif
 		pageTable[i].use = false;

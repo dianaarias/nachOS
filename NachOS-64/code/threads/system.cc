@@ -39,8 +39,8 @@ SemaphoreTable* semtable;
 SemaphoreTable* semaphoreJoin;
 NachosThreadTable* runningThreadTable;
 NachosOpenFilesTable* openFilesT;
-bool joinAvailable[EXEC_N];
-int semaphoreIDVec[EXEC_N];
+#endif
+
 #ifdef VM//////////////////////////////////////
 BitMap* swapBitMap;
 OpenFile* swap;
@@ -48,7 +48,7 @@ TranslationEntry** ipt;
 int swapSize;
 int scMem_counter;
 #endif
-#endif
+
 
 #ifdef NETWORK
 PostOffice *postOffice;
@@ -202,6 +202,7 @@ Initialize(int argc, char **argv)
     bitMSem = new Semaphore("BitMap", 1);
     runningThreadTable = new NachosThreadTable();
 #endif
+
 #ifdef VM //////////////////////////////////////////////////////////////////////////
 	swapSize = NumPhysPages < 32 ? 64 : NumPhysPages * 2;
 	swapBitMap = new BitMap(swapSize);
@@ -268,6 +269,7 @@ Cleanup()
     delete bitMSem;
     delete runningThreadTable;
 #endif
+
 #ifdef VM
 	delete swapBitMap;
   delete ipt;
