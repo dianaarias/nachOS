@@ -17,6 +17,7 @@
 #include "interrupt.h"
 #include "stats.h"
 #include "timer.h"
+#include "translate.h"
 
 
 // Initialization and cleanup routines
@@ -35,22 +36,17 @@ extern Timer *timer;				// the hardware alarm clock
 
 #ifdef USER_PROGRAM
 #include "machine.h"
-
 extern Machine* machine;	// user program memory and registers
 #include "bitmap.h"
-extern BitMap *execSemaphoreMap;
 extern BitMap* memMap;
-#include "nachostable.h"
-extern NachosOpenFilesTable* openFilesT;
 #include "threadtable.h"
 extern NachosThreadTable* runningThreadTable;
-#include "semtable.h"
-extern SemaphoreTable* semtable;
-extern SemaphoreTable* semaphoreJoin;
 #include <synch.h>
 extern Semaphore* bitMSem;
+extern Semaphore* consoleMutex;
+#endif
 
-#ifdef VM //////////////////////////////////////////////////////////
+#ifdef VM 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -58,12 +54,8 @@ extern Semaphore* bitMSem;
 extern BitMap* swapBitMap;
 extern OpenFile* swap;
 extern int swapSize;
-
 extern int scMem_counter;
-
 extern TranslationEntry** ipt;
-#endif
-
 #endif
 
 #ifdef FILESYS_NEEDED 		// FILESYS or FILESYS_STUB

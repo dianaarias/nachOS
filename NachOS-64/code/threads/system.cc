@@ -32,16 +32,17 @@ SynchDisk   *synchDisk;
 
 #ifdef USER_PROGRAM	// requires either FILESYS or FILESYS_STUB
 Machine* machine;	// user program memory and registers
-BitMap* execSemaphoreMap;
 BitMap* memMap;
 Semaphore* bitMSem;
-SemaphoreTable* semtable;
-SemaphoreTable* semaphoreJoin;
+Semaphore* consoleMutex;
 NachosThreadTable* runningThreadTable;
-NachosOpenFilesTable* openFilesT;
 #endif
 
-#ifdef VM//////////////////////////////////////
+#ifdef NETWORK
+PostOffice *postOffice;
+#endif
+
+#ifdef VM
 BitMap* swapBitMap;
 OpenFile* swap;
 TranslationEntry** ipt;
@@ -50,16 +51,8 @@ int scMem_counter;
 #endif
 
 
-#ifdef NETWORK
-PostOffice *postOffice;
-#endif
-
-
 // External definition, to allow us to take a pointer to this function
 extern void Cleanup();
-
-
-
 
 //----------------------------------------------------------------------
 // TimerInterruptHandler
@@ -109,7 +102,6 @@ Initialize(int argc, char **argv)
 
 #ifdef USER_PROGRAM
     bool debugUserProg = false;	// single step user program
-    semtable = new SemaphoreTable();
 #endif
 #ifdef FILESYS_NEEDED
     bool format = false;	// format disk
@@ -146,7 +138,6 @@ Initialize(int argc, char **argv)
 	    }
 	}
 #ifdef USER_PROGRAM
-	Machine* Machine;
 	if (!strcmp(*argv, "-s"))
 	    debugUserProg = true;
 #endif
@@ -194,16 +185,13 @@ Initialize(int argc, char **argv)
 
 #ifdef USER_PROGRAM
     machine = new Machine(debugUserProg);	// this must come first
-    execSemaphoreMap = new BitMap(EXEC_N);
-		memMap = new BitMap(NumPhysPages);
-    semaphoreJoin = new SemaphoreTable();
-    semtable = new SemaphoreTable();
-		openFilesT = new NachosOpenFilesTable();
+	memMap = new BitMap(NumPhysPages);
     bitMSem = new Semaphore("BitMap", 1);
+	consoleMutex = new Semaphore("Console", 1);
     runningThreadTable = new NachosThreadTable();
 #endif
 
-#ifdef VM //////////////////////////////////////////////////////////////////////////
+#ifdef VM 
 	swapSize = NumPhysPages < 32 ? 64 : NumPhysPages * 2;
 	swapBitMap = new BitMap(swapSize);
 
@@ -261,18 +249,15 @@ Cleanup()
 
 #ifdef USER_PROGRAM
     delete machine;
-    delete execSemaphoreMap;
-    delete semaphoreJoin;
-    delete openFilesT;
-    delete semtable;
-		delete memMap;
+	delete memMap;
     delete bitMSem;
+	delete consoleMutex;
     delete runningThreadTable;
 #endif
 
 #ifdef VM
 	delete swapBitMap;
-  delete ipt;
+	delete ipt;
 	delete swap;
 	remove("swap");
 #endif

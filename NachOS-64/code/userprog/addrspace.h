@@ -54,7 +54,7 @@ class AddrSpace {
     //Checks when to put page on TLB and does so
     void load(int pageFault); //Catch page fault
     int goToTLB();            //Put page on TLB
-    enum PageType {TEXT,INIDAT,NONINITSTACK}; //Enumerate cases of TEXT, Initialized Data and Non initialized/Stack
+    enum PageType {TEXT,INITDATA,NONINITSTACK}; //Enumerate cases of TEXT, Initialized Data and Non initialized/Stack
     int getSection(TranslationEntry* entry);  //Gets section from specified translation entry
     void chooseVictim (PageType type, bool dirty, bool victim, TranslationEntry* pageEntry); //Chooses a victim for SWAP
 

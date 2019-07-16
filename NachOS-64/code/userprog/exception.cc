@@ -33,7 +33,6 @@
 #include <unistd.h>
 #define BUFFERLENGTH 124
 int exitStatus = 0;
-Semaphore* Console = new Semaphore("Console", 1);
 
 void returnFromSystemCall(){
     int pc, npc;
@@ -257,7 +256,7 @@ void Nachos_Read() {           // System call 6
 
     bool error =false;
 
-    Console->P();
+    consoleMutex->P();
     switch (id) {
         case ConsoleInput:
           read_result = read(id, buffer, size);
@@ -294,7 +293,7 @@ void Nachos_Read() {           // System call 6
   		addrs++;
 	  }
     delete buffer;
-    Console->V();
+    consoleMutex->V();
 
     returnFromSystemCall();
 
@@ -318,7 +317,7 @@ void Nachos_Write() {           // System call 7
     }
 
 	// Need a semaphore to synchronize access to console
-	Console->P();
+	consoleMutex->P();
 	switch (id) {
 		case  ConsoleInput:	// User could not write to standard input
 			machine->WriteRegister( 2, -1 );
@@ -355,7 +354,7 @@ void Nachos_Write() {           // System call 7
 		break;
 	}
 	// Update simulation stats, see details in Statistics class in machine/stats.cc
-	Console->V();
+	consoleMutex->V();
 
   returnFromSystemCall();		// Update the PC registers
 
@@ -381,7 +380,6 @@ void Nachos_Close() {           // System call 8
     else{
         machine->WriteRegister(2, -1);
     }
-
     returnFromSystemCall();
 }       // Nachos_Close
 
@@ -433,8 +431,8 @@ void Nachos_Yield() {           // System call 10
 void Nachos_SemCreate() {        // System call 11
     int value = machine->ReadRegister(4);
     char * name = new char[50];
-    sprintf(name, "Semaphore %d", semtable->find());
-    int handle = semtable->Create((long)new Semaphore(name, value));
+    sprintf(name, "Semaphore %d", currentThread->semtable->find());
+    int handle = currentThread->semtable->Create((long)new Semaphore(name, value));
     if(handle == -1){
         machine->WriteRegister(2,-1);
     }
@@ -447,7 +445,7 @@ void Nachos_SemCreate() {        // System call 11
 /* SemDestroy destroys a semaphore identified by id */
 void Nachos_SemDestroy() {       // System call 12
     int sem_value = machine->ReadRegister(4);
-    int handle = semtable->Destroy(sem_value);
+    int handle = currentThread->semtable->Destroy(sem_value);
     if(handle == -1){
         machine->WriteRegister(2,-1);
     }
@@ -463,9 +461,9 @@ void Nachos_SemSignal() {        // System call 13
     int sem_value = machine->ReadRegister(4);
     int returnVal=-1;
     //Encuentra el semaforo en la tabla de semaforos
-    if(semtable->exists(sem_value))
+    if(currentThread->semtable->exists(sem_value))
     {
-      Semaphore* sem= (Semaphore*)semtable->getSemaphore(sem_value);
+      Semaphore* sem= (Semaphore*)currentThread->semtable->getSemaphore(sem_value);
       //Hace Signal en semaforo
       sem->V();
       returnVal=0;
@@ -481,9 +479,9 @@ void Nachos_SemWait() {          // System call 14
     int sem_value = machine->ReadRegister(4);
     int returnVal=-1;
     //Encuentra el semaforo en la tabla de semaforos
-    if (semtable->exists(sem_value))
+    if (currentThread->semtable->exists(sem_value))
     {
-      Semaphore* sem=(Semaphore*)semtable->getSemaphore(sem_value);
+      Semaphore* sem=(Semaphore*)currentThread->semtable->getSemaphore(sem_value);
       //Hace Wait en semaforo
       sem->P();
       returnVal=0;
@@ -495,17 +493,17 @@ void Nachos_SemWait() {          // System call 14
 
 
 void PageFaultCatcher() {
-/*#ifdef VM
+#ifdef VM
 	unsigned int faultAddrs = machine->ReadRegister(39);
-	DEBUG('s',"Page Fault at #%d. FaultAddrs = 0x%x Swapped Pages: %d\n", stats->numPageFaults,faultAddrs,space->pagSwap);
+	DEBUG('s',"Page Fault at #%d. FaultAddrs = 0x%x Swapped Pages: %d\n", stats->numPageFaults,faultAddrs,currentThread->space->swapCounter);
 	unsigned int faultPage = (unsigned) faultAddrs / PageSize;
 	int faultOffset = faultAddrs % PageSize;
 	DEBUG('s',"BadPage = %d, BadOffset = %d \n", faultPage, faultOffset);
-	space->load( faultPage );
+	currentThread->space->load( faultPage );
 	stats->numPageFaults++;
 #else
 	ASSERT(false);
-#endif*/
+#endif
 }
 //----------------------------------------------------------------------
 // ExceptionHandler

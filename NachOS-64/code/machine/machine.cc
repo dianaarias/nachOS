@@ -64,7 +64,7 @@ Machine::Machine(bool debug)
 #ifdef USE_TLB
     tlb = new TranslationEntry[TLBSize];
     for (i = 0; i < TLBSize; i++)
-	tlb[i].valid = false;
+	    tlb[i].valid = false;
     pageTable = NULL;
 #else	// use linear page table
     tlb = NULL;
@@ -131,25 +131,25 @@ void Machine::Debugger()
     fflush(stdout);
     fgets(buf, 80, stdin);
     if (sscanf(buf, "%d", &num) == 1)
-	runUntilTime = num;
+	    runUntilTime = num;
     else {
-	runUntilTime = 0;
-	switch (*buf) {
-	  case '\n':
-	    break;
-	    
-	  case 'c':
-	    singleStep = false;
-	    break;
-	    
-	  case '?':
-	    printf("Machine commands:\n");
-	    printf("    <return>  execute one instruction\n");
-	    printf("    <number>  run until the given timer tick\n");
-	    printf("    c         run until completion\n");
-	    printf("    ?         print help message\n");
-	    break;
-	}
+        runUntilTime = 0;
+        switch (*buf) {
+            case '\n':
+                break;
+                
+            case 'c':
+                singleStep = false;
+                break;
+                
+            case '?':
+                printf("Machine commands:\n");
+                printf("    <return>  execute one instruction\n");
+                printf("    <number>  run until the given timer tick\n");
+                printf("    c         run until completion\n");
+                printf("    ?         print help message\n");
+                break;
+	    }
     }
     delete [] buf;
 }
@@ -167,22 +167,22 @@ Machine::DumpState()
     
     printf("Machine registers:\n");
     for (i = 0; i < NumGPRegs; i++)
-	switch (i) {
-	  case StackReg:
-	    printf("\tSP(%d):\t0x%x%s", i, registers[i],
-		   ((i % 4) == 3) ? "\n" : "");
-	    break;
-	    
-	  case RetAddrReg:
-	    printf("\tRA(%d):\t0x%x%s", i, registers[i],
-		   ((i % 4) == 3) ? "\n" : "");
-	    break;
-	  
-	  default:
-	    printf("\t%d:\t0x%x%s", i, registers[i],
-		   ((i % 4) == 3) ? "\n" : "");
-	    break;
-	}
+        switch (i) {
+            case StackReg:
+                printf("\tSP(%d):\t0x%x%s", i, registers[i],
+                ((i % 4) == 3) ? "\n" : "");
+                break;
+                
+            case RetAddrReg:
+                printf("\tRA(%d):\t0x%x%s", i, registers[i],
+                ((i % 4) == 3) ? "\n" : "");
+                break;
+            
+            default:
+                printf("\t%d:\t0x%x%s", i, registers[i],
+                ((i % 4) == 3) ? "\n" : "");
+                break;
+	    }
     
     printf("\tHi:\t0x%x", registers[HiReg]);
     printf("\tLo:\t0x%x\n", registers[LoReg]);
@@ -200,15 +200,15 @@ Machine::DumpState()
 //----------------------------------------------------------------------
 
 int Machine::ReadRegister(int num)
-    {
+{
 	ASSERT((num >= 0) && (num < NumTotalRegs));
 	return registers[num];
-    }
+}
 
 void Machine::WriteRegister(int num, int value)
-    {
+{
 	ASSERT((num >= 0) && (num < NumTotalRegs));
 	// DEBUG('m', "WriteRegister %d, value %d\n", num, value);
 	registers[num] = value;
-    }
+}
 

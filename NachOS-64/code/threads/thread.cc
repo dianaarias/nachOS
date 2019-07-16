@@ -19,7 +19,6 @@
 #include "switch.h"
 #include "synch.h"
 #include "system.h"
-//#include "nachostable.h"
 
 // this is put at the top of the execution stack,
 // for detecting stack overflows
@@ -41,8 +40,9 @@ Thread::Thread(const char* threadName)
     status = JUST_CREATED;
 #ifdef USER_PROGRAM
     space = NULL;
-    openFilesT = new NachosOpenFilesTable();
+    nachostable = new NachosOpenFilesTable();
     semtable =new SemaphoreTable();
+    threadID = -1;
 #endif
 }
 
@@ -189,8 +189,8 @@ Thread::Yield ()
 
     nextThread = scheduler->FindNextToRun();
     if (nextThread != NULL) {
-	scheduler->ReadyToRun(this);
-	scheduler->Run(nextThread);
+	    scheduler->ReadyToRun(this);
+	    scheduler->Run(nextThread);
     }
     interrupt->SetLevel(oldLevel);
 }

@@ -166,7 +166,8 @@ AddrSpace::AddrSpace(OpenFile *executable)
 
 //----------------------------------------------------------------------
 // AddrSpace::AddrSpace
-// Coping the father's AddrSpace
+// Constructor for children.
+// Copying father's AddrSpace.
 //----------------------------------------------------------------------
 AddrSpace::AddrSpace(AddrSpace *space, int fatherCodePageSize, int *fatherAddrUsage) {
 #ifdef VM
@@ -235,9 +236,8 @@ AddrSpace::AddrSpace(AddrSpace *space, int fatherCodePageSize, int *fatherAddrUs
 
 //----------------------------------------------------------------------
 // AddrSpace::~AddrSpace
-// 	Dealloate an address space.  Nothing for now!
+// 	Dealloate an address space.  
 //----------------------------------------------------------------------
-
 AddrSpace::~AddrSpace()
 {
 	(*addrSpaceUsage)--;
@@ -278,6 +278,7 @@ void AddrSpace::copyName(const char* name) {
 	std::copy(name, name + strlen(name), filename);
 	filename[strlen(name)] = 0;
 }
+
 //----------------------------------------------------------------------
 // AddrSpace::InitRegisters
 // 	Set the initial values for the user-level register set.
@@ -287,9 +288,7 @@ void AddrSpace::copyName(const char* name) {
 //	will be saved/restored into the currentThread->userRegisters
 //	when this thread is context switched out.
 //----------------------------------------------------------------------
-
-void
-AddrSpace::InitRegisters()
+void AddrSpace::InitRegisters()
 {
     int i;
 
@@ -314,12 +313,16 @@ AddrSpace::InitRegisters()
 // AddrSpace::SaveState
 // 	On a context switch, save any machine state, specific
 //	to this address space, that needs saving.
-//
-//	For now, nothing!
 //----------------------------------------------------------------------
-
 void AddrSpace::SaveState(){
-
+#ifdef VM
+    for(int i=0; i<TLBSize; i++){ //index TLB for context switch
+        if(machine->tlb[i].valid){
+            pageTable[machine->tlb[i].virtualPage].dirty = machine->tlb[i].dirty; //Keep dirty bits from one context on the other
+            machine->tlb[i].valid = false; //Not supposed to be executed if not in current context
+        }
+    }
+#endif
 }
 
 //----------------------------------------------------------------------
@@ -329,9 +332,306 @@ void AddrSpace::SaveState(){
 //
 //      For now, tell the machine where to find the page table.
 //----------------------------------------------------------------------
-
 void AddrSpace::RestoreState()
 {
+#ifdef VM
+    for(int i=0; i<TLBSize; i++){
+        machine->tlb[i].valid = false;
+    }
+#else
     machine->pageTable = pageTable;
     machine->pageTableSize = numPages;
+#endif
 }
+
+#ifdef VM
+//----------------------------------------------------------------------
+// AddrSpace::load
+// Decides whether to load a page in the TLB when a page fault is detected.
+//----------------------------------------------------------------------
+void AddrSpace::load(int pageFault)
+{
+	int tlbIndex = 0;
+    //Checks for any free space on TLB
+    for(int i=0; i < TLBSize; i++){
+        if(machine->tlb[i].valid){
+            tlbIndex++;
+        }
+        else{
+            break;
+        }
+    }
+	if (tlbIndex >= TLBSize) { //If there's free space on TLB
+		tlbIndex = goToTLB();
+		pageTable[machine->tlb[tlbIndex].virtualPage].dirty = machine->tlb[tlbIndex].dirty;
+		DEBUG ('a', "Page #%d has been saved on page table\n", tlbIndex);
+	}
+	if (!pageTable[pageFault].valid) { //Choose victim for page fault
+		chooseVictim((PageType)getSection(&pageTable[pageFault]), pageTable[pageFault].dirty, false, &pageTable[pageFault]);
+		pageTable[pageFault].use = true;
+		stats->numPageFaults++; 
+	}
+    machine->tlb[tlbIndex].valid = pageTable[pageFault].valid;
+    machine->tlb[tlbIndex].dirty = pageTable[pageFault].dirty;
+    machine->tlb[tlbIndex].physicalPage = pageTable[pageFault].physicalPage;
+	machine->tlb[tlbIndex].virtualPage = pageTable[pageFault].virtualPage;
+	machine->tlb[tlbIndex].readOnly = pageTable[pageFault].readOnly;
+
+	DEBUG ('a', "Page #%d has been loaded in TLB\n", pageFault);
+}
+
+//----------------------------------------------------------------------
+// AddrSpace::goToTLB
+// Finds a place in the TLB for a specific page when a page fault is detected.
+// Implementation based on Second Chance Algorithm
+//----------------------------------------------------------------------
+int AddrSpace::goToTLB()
+{
+	bool selected = false;
+	int passedPages;
+	while (!selected) {
+		passedPages = 0;
+		// Look for (0,0) pages
+		while (passedPages < TLBSize && !selected) {
+			if (!machine->tlb[TLBCounter].use && !machine->tlb[TLBCounter].dirty){
+                selected = true;
+            }
+			else{ 
+				TLBCounter = (TLBCounter + 1) % TLBSize;
+            }
+			passedPages++;
+		}
+		if (!selected) {
+			// If no (0,0) look for (0,1) pages
+			passedPages = 0;
+			while (passedPages < TLBSize && !selected) {
+				if (!machine->tlb[TLBCounter].use && machine->tlb[TLBCounter].dirty){
+					selected = true;
+                }
+				else{ 
+					TLBCounter = (TLBCounter + 1) % TLBSize;
+                }
+				passedPages++;
+			}
+			if (!selected) {
+				// If no pages with use bit == 0
+				// use bit = 0 and start search again
+				passedPages = 0;
+				while (passedPages < TLBSize) {
+					machine->tlb[TLBCounter].use = false;
+					TLBCounter = (TLBCounter + 1) % TLBSize;
+					passedPages++;
+				}
+			}
+		}
+	}
+	return TLBCounter;
+}
+
+
+//----------------------------------------------------------------------
+// AddrSpace::getSection
+// Get section case
+//----------------------------------------------------------------------
+int AddrSpace::getSection(TranslationEntry* entry) {
+	if (entry->readOnly) {
+		return TEXT;
+	} else if (entry->inExec) {
+		return INITDATA; //Initialized data
+	} else {
+		return NONINITSTACK; //Unitialized data/stack
+	}
+}
+
+//----------------------------------------------------------------------
+// AddrSpace::chooseVictim
+// Process page fault: choose a victim for SWAP depending on 
+// page fault's page type
+//----------------------------------------------------------------------
+void AddrSpace::chooseVictim (PageType type, bool dirty, bool victim, TranslationEntry* pageEntry) {
+	DEBUG('a', "El tipo es %d y es victima = %d\n", type, victim);
+	int physicalPage = -1;
+	switch (type) {
+		case TEXT: //Page is readOnly (user code)
+			if (dirty) {
+				printf("Code segment is dirty\n");
+				ASSERT(false);
+			} else {
+				if (victim) {
+					ZeroOutOutPageMem(pageEntry);
+				} else {
+					physicalPage = findMem();
+					pageEntry->physicalPage = physicalPage;
+					SwapExec(pageEntry);
+				}
+			}
+		break;
+
+		case INITDATA: //Page contains initialized variables
+			if (dirty) {
+				if (victim) {
+					SwapOut(pageEntry);
+				} else {
+					physicalPage = findMem();
+					SwapIn(pageEntry, physicalPage);
+				}
+			} else {
+				if (victim) {
+					ZeroOutOutPageMem(pageEntry);
+				} else {
+					physicalPage = findMem();
+					pageEntry->physicalPage = physicalPage;
+					SwapExec(pageEntry);
+				}
+			}
+		break;
+
+		case NONINITSTACK: //Page contains uninitialized variables, which mostly belong to stack memory
+			if (dirty) {
+				if (victim) {
+					SwapOut(pageEntry);
+				} else {
+					physicalPage = findMem();
+					SwapIn(pageEntry, physicalPage);
+				}
+			} else {
+				if (victim) {
+					ZeroOutOutPageMem(pageEntry);
+				} else {
+					physicalPage = findMem();
+					pageEntry->physicalPage = physicalPage;
+					ZeroOutInPageMem(pageEntry);
+				}
+			}
+		break;
+	}
+}
+
+//----------------------------------------------------------------------
+// AddrSpace::findMem
+// Finds a physicalPage address for SWAP
+// Used on chooseVictim
+//----------------------------------------------------------------------
+int AddrSpace::findMem () {
+	int physicalPage = memMap->Find();
+	if (physicalPage == -1) {
+		physicalPage = goToMemory();
+	}
+	return physicalPage;
+}
+
+//----------------------------------------------------------------------
+// AddrSpace::goToMemory
+// Finds VM space for victim
+//----------------------------------------------------------------------
+int AddrSpace::goToMemory () {
+	while (ipt[scMem_counter]->use) {
+		ipt[scMem_counter]->use = false;
+		scMem_counter = (scMem_counter + 1) % NumPhysPages;
+	}
+	DEBUG('A', "El indice de sc de memoria es: %d\n", scMem_counter);
+	PageType section = (PageType)getSection(ipt[scMem_counter]);
+	chooseVictim(section, ipt[scMem_counter]->dirty, true, ipt[scMem_counter]);
+	return scMem_counter;
+}
+
+//----------------------------------------------------------------------
+// AddrSpace::ZeroOutInPageMem
+// Fills incoming page with zeros
+//----------------------------------------------------------------------
+void AddrSpace::ZeroOutInPageMem (TranslationEntry* inPage) {
+	inPage->valid = true;
+	int physicalPage = inPage->physicalPage;
+	ipt[physicalPage] = inPage;
+	
+	bzero(&(machine->mainMemory[physicalPage*PageSize]), PageSize);
+}
+
+//----------------------------------------------------------------------
+// AddrSpace::SwapIn
+// Stores page in physical memory. SWAP in
+// Cleans old address by zeroing it out
+//----------------------------------------------------------------------
+void AddrSpace::SwapIn (TranslationEntry* inPage, int physicalPage) {
+
+	ipt[physicalPage] = inPage;
+	int swapPage = inPage->physicalPage;
+	if (swapPage < 0 || swapPage > swapSize || !swapBitMap->Test(swapPage)) {
+		printf("Invalid swap entry found on assigned Swap Page, should not happen.\n");
+		ASSERT(false);
+	}
+	inPage->physicalPage = physicalPage;
+	swap->ReadAt(&(machine->mainMemory[physicalPage*PageSize]), PageSize, swapPage * PageSize);
+	DEBUG('a', "Swap puts vp #%d in mem from pos: %d, to pp #%d\n", inPage->virtualPage, swapPage, physicalPage);
+	swapBitMap->Clear(swapPage);
+	swap->WriteAt(zeroOut, PageSize, swapPage * PageSize);
+
+	inPage->valid = true;
+}
+
+//----------------------------------------------------------------------
+// AddrSpace::SwapExec
+// Stores page containing executable data in physical memory. SWAP in
+//----------------------------------------------------------------------
+void AddrSpace::SwapExec (TranslationEntry* inPage) {
+	OpenFile fileExec = *(fileSystem->Open(filename));
+	int physicalPage = inPage->physicalPage;
+	ipt[physicalPage] = inPage;
+	DEBUG('a', "Assigned physical page is %d for virtual page %d\n", inPage->physicalPage, inPage->virtualPage);
+
+	NoffHeader noffH;
+
+	fileExec.ReadAt((char *)&noffH, sizeof(noffH), 0);
+	int inFileAddress = noffH.code.inFileAddr + (inPage->virtualPage * PageSize);
+	int mainMemory_address = (inPage->physicalPage) * PageSize;
+	fileExec.ReadAt(&(machine->mainMemory[mainMemory_address]), PageSize, inFileAddress);
+
+	inPage->valid = true;
+}
+
+//----------------------------------------------------------------------
+// AddrSpace::SwapOut
+// Frees up physical address. SWAP out.
+//----------------------------------------------------------------------
+void AddrSpace::SwapOut (TranslationEntry* outPage) {
+	swapCounter++;
+	int swapPage = swapBitMap->Find();
+	if (swapPage < 0) {
+		printf("Not enough space in the swap, the program aborts.\n");
+		ASSERT(false);
+	}
+
+	int physicalPage = outPage->physicalPage;
+	DEBUG('a', "swap takes out vp #%d to position %d from pp #%d\n", outPage->virtualPage, swapPage, physicalPage);
+	outPage->physicalPage = swapPage;
+	outPage->valid = false;
+
+	for (int i = 0; i < TLBSize; i++) {
+		if (machine->tlb[i].virtualPage == outPage->virtualPage && &(pageTable)[outPage->virtualPage] == outPage) {
+			machine->tlb[i].valid = false;
+		}
+	}
+
+	swap->WriteAt(&(machine->mainMemory[physicalPage*PageSize]), PageSize, swapPage * PageSize);
+	
+	bzero(&(machine->mainMemory[PageSize * physicalPage]), PageSize);	// Initialization of the reserved physical page
+	ipt[physicalPage] = 0;
+}
+
+//----------------------------------------------------------------------
+// AddrSpace::ZeroOutOutPageMem
+// Fills outgoing page with zeros
+//----------------------------------------------------------------------
+void AddrSpace::ZeroOutOutPageMem (TranslationEntry* outPage) {
+	outPage->valid = false;
+	for (int i = 0; i < TLBSize; i++) {
+		if (machine->tlb[i].virtualPage == outPage->virtualPage && &(pageTable)[outPage->virtualPage] == outPage) {
+			machine->tlb[i].valid = false;
+		}
+	}
+
+	int physicalPage = outPage->physicalPage;
+	bzero(&(machine->mainMemory[PageSize * physicalPage]), PageSize);	// Initialization of the reserved physical page
+	ipt[physicalPage] = 0;
+}
+#endif
