@@ -120,9 +120,9 @@ main.o: ../threads/main.cc /usr/include/stdc-predef.h \
  ../userprog/nachostable.h ../userprog/bitmap.h ../filesys/openfile.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/scheduler.h \
  ../threads/list.h ../machine/interrupt.h ../threads/list.h \
- ../machine/stats.h ../machine/timer.h ../userprog/bitmap.h \
- ../userprog/threadtable.h ../threads/thread.h /usr/include/c++/7/vector \
- /usr/include/c++/7/bits/allocator.h \
+ ../machine/stats.h ../machine/timer.h ../machine/translate.h \
+ ../userprog/bitmap.h ../userprog/threadtable.h ../threads/thread.h \
+ /usr/include/c++/7/vector /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
  /usr/include/c++/7/bits/stl_uninitialized.h \
@@ -231,8 +231,8 @@ scheduler.o: ../threads/scheduler.cc /usr/include/stdc-predef.h \
  ../userprog/nachostable.h ../userprog/bitmap.h ../filesys/openfile.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/system.h \
  ../machine/interrupt.h ../threads/list.h ../machine/stats.h \
- ../machine/timer.h ../userprog/bitmap.h ../userprog/threadtable.h \
- ../threads/thread.h /usr/include/c++/7/vector \
+ ../machine/timer.h ../machine/translate.h ../userprog/bitmap.h \
+ ../userprog/threadtable.h ../threads/thread.h /usr/include/c++/7/vector \
  /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
@@ -343,8 +343,9 @@ synch.o: ../threads/synch.cc /usr/include/stdc-predef.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/list.h \
  ../threads/system.h ../threads/scheduler.h ../machine/interrupt.h \
  ../threads/list.h ../machine/stats.h ../machine/timer.h \
- ../userprog/bitmap.h ../userprog/threadtable.h ../threads/thread.h \
- /usr/include/c++/7/vector /usr/include/c++/7/bits/allocator.h \
+ ../machine/translate.h ../userprog/bitmap.h ../userprog/threadtable.h \
+ ../threads/thread.h /usr/include/c++/7/vector \
+ /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
  /usr/include/c++/7/bits/stl_uninitialized.h \
@@ -453,9 +454,9 @@ system.o: ../threads/system.cc /usr/include/stdc-predef.h \
  ../userprog/nachostable.h ../userprog/bitmap.h ../filesys/openfile.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/scheduler.h \
  ../threads/list.h ../machine/interrupt.h ../threads/list.h \
- ../machine/stats.h ../machine/timer.h ../userprog/bitmap.h \
- ../userprog/threadtable.h ../threads/thread.h /usr/include/c++/7/vector \
- /usr/include/c++/7/bits/allocator.h \
+ ../machine/stats.h ../machine/timer.h ../machine/translate.h \
+ ../userprog/bitmap.h ../userprog/threadtable.h ../threads/thread.h \
+ /usr/include/c++/7/vector /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
  /usr/include/c++/7/bits/stl_uninitialized.h \
@@ -565,9 +566,9 @@ thread.o: ../threads/thread.cc /usr/include/stdc-predef.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/switch.h \
  ../threads/synch.h ../threads/list.h ../threads/system.h \
  ../threads/scheduler.h ../machine/interrupt.h ../threads/list.h \
- ../machine/stats.h ../machine/timer.h ../userprog/bitmap.h \
- ../userprog/threadtable.h ../threads/thread.h /usr/include/c++/7/vector \
- /usr/include/c++/7/bits/allocator.h \
+ ../machine/stats.h ../machine/timer.h ../machine/translate.h \
+ ../userprog/bitmap.h ../userprog/threadtable.h ../threads/thread.h \
+ /usr/include/c++/7/vector /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
  /usr/include/c++/7/bits/stl_uninitialized.h \
@@ -737,9 +738,9 @@ threadtest.o: ../threads/threadtest.cc /usr/include/stdc-predef.h \
  ../userprog/nachostable.h ../userprog/bitmap.h ../filesys/openfile.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/scheduler.h \
  ../threads/list.h ../machine/interrupt.h ../threads/list.h \
- ../machine/stats.h ../machine/timer.h ../userprog/bitmap.h \
- ../userprog/threadtable.h ../threads/thread.h /usr/include/c++/7/vector \
- /usr/include/c++/7/bits/allocator.h \
+ ../machine/stats.h ../machine/timer.h ../machine/translate.h \
+ ../userprog/bitmap.h ../userprog/threadtable.h ../threads/thread.h \
+ /usr/include/c++/7/vector /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
  /usr/include/c++/7/bits/stl_uninitialized.h \
@@ -1046,8 +1047,8 @@ interrupt.o: ../machine/interrupt.cc /usr/include/stdc-predef.h \
  ../userprog/nachostable.h ../userprog/bitmap.h ../filesys/openfile.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/scheduler.h \
  ../threads/list.h ../machine/interrupt.h ../machine/stats.h \
- ../machine/timer.h ../userprog/bitmap.h ../userprog/threadtable.h \
- ../threads/thread.h /usr/include/c++/7/vector \
+ ../machine/timer.h ../machine/translate.h ../userprog/bitmap.h \
+ ../userprog/threadtable.h ../threads/thread.h /usr/include/c++/7/vector \
  /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
@@ -1205,8 +1206,8 @@ sysdep.o: ../machine/sysdep.cc /usr/include/stdc-predef.h \
  ../userprog/nachostable.h ../userprog/bitmap.h ../filesys/openfile.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/scheduler.h \
  ../threads/list.h ../machine/interrupt.h ../machine/stats.h \
- ../machine/timer.h ../userprog/bitmap.h ../userprog/threadtable.h \
- ../threads/thread.h /usr/include/c++/7/vector \
+ ../machine/timer.h ../machine/translate.h ../userprog/bitmap.h \
+ ../userprog/threadtable.h ../threads/thread.h /usr/include/c++/7/vector \
  /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
@@ -1362,9 +1363,9 @@ timer.o: ../machine/timer.cc /usr/include/stdc-predef.h \
  ../userprog/nachostable.h ../userprog/bitmap.h ../filesys/openfile.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/scheduler.h \
  ../threads/list.h ../machine/interrupt.h ../threads/list.h \
- ../machine/stats.h ../machine/timer.h ../userprog/bitmap.h \
- ../userprog/threadtable.h ../threads/thread.h /usr/include/c++/7/vector \
- /usr/include/c++/7/bits/allocator.h \
+ ../machine/stats.h ../machine/timer.h ../machine/translate.h \
+ ../userprog/bitmap.h ../userprog/threadtable.h ../threads/thread.h \
+ /usr/include/c++/7/vector /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
  /usr/include/c++/7/bits/stl_uninitialized.h \
@@ -1473,9 +1474,9 @@ preemptive.o: ../threads/preemptive.cc /usr/include/stdc-predef.h \
  ../userprog/nachostable.h ../userprog/bitmap.h ../filesys/openfile.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/scheduler.h \
  ../threads/list.h ../machine/interrupt.h ../threads/list.h \
- ../machine/stats.h ../machine/timer.h ../userprog/bitmap.h \
- ../userprog/threadtable.h ../threads/thread.h /usr/include/c++/7/vector \
- /usr/include/c++/7/bits/allocator.h \
+ ../machine/stats.h ../machine/timer.h ../machine/translate.h \
+ ../userprog/bitmap.h ../userprog/threadtable.h ../threads/thread.h \
+ /usr/include/c++/7/vector /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
  /usr/include/c++/7/bits/stl_uninitialized.h \
@@ -1607,9 +1608,9 @@ addrspace.o: ../userprog/addrspace.cc /usr/include/stdc-predef.h \
  ../userprog/nachostable.h ../userprog/bitmap.h ../filesys/openfile.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/scheduler.h \
  ../threads/list.h ../machine/interrupt.h ../threads/list.h \
- ../machine/stats.h ../machine/timer.h ../userprog/bitmap.h \
- ../userprog/threadtable.h ../threads/thread.h /usr/include/c++/7/vector \
- /usr/include/c++/7/bits/allocator.h \
+ ../machine/stats.h ../machine/timer.h ../machine/translate.h \
+ ../userprog/bitmap.h ../userprog/threadtable.h ../threads/thread.h \
+ /usr/include/c++/7/vector /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
  /usr/include/c++/7/bits/stl_uninitialized.h \
@@ -1981,9 +1982,9 @@ exception.o: ../userprog/exception.cc /usr/include/stdc-predef.h \
  ../userprog/nachostable.h ../userprog/bitmap.h ../filesys/openfile.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/scheduler.h \
  ../threads/list.h ../machine/interrupt.h ../threads/list.h \
- ../machine/stats.h ../machine/timer.h ../userprog/bitmap.h \
- ../userprog/threadtable.h ../threads/thread.h /usr/include/c++/7/vector \
- /usr/include/c++/7/bits/allocator.h \
+ ../machine/stats.h ../machine/timer.h ../machine/translate.h \
+ ../userprog/bitmap.h ../userprog/threadtable.h ../threads/thread.h \
+ /usr/include/c++/7/vector /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
  /usr/include/c++/7/bits/stl_uninitialized.h \
@@ -2093,9 +2094,9 @@ progtest.o: ../userprog/progtest.cc /usr/include/stdc-predef.h \
  ../userprog/nachostable.h ../userprog/bitmap.h ../filesys/openfile.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/scheduler.h \
  ../threads/list.h ../machine/interrupt.h ../threads/list.h \
- ../machine/stats.h ../machine/timer.h ../userprog/bitmap.h \
- ../userprog/threadtable.h ../threads/thread.h /usr/include/c++/7/vector \
- /usr/include/c++/7/bits/allocator.h \
+ ../machine/stats.h ../machine/timer.h ../machine/translate.h \
+ ../userprog/bitmap.h ../userprog/threadtable.h ../threads/thread.h \
+ /usr/include/c++/7/vector /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
  /usr/include/c++/7/bits/stl_uninitialized.h \
@@ -2206,9 +2207,9 @@ console.o: ../machine/console.cc /usr/include/stdc-predef.h \
  ../userprog/nachostable.h ../userprog/bitmap.h ../filesys/openfile.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/scheduler.h \
  ../threads/list.h ../machine/interrupt.h ../threads/list.h \
- ../machine/stats.h ../machine/timer.h ../userprog/bitmap.h \
- ../userprog/threadtable.h ../threads/thread.h /usr/include/c++/7/vector \
- /usr/include/c++/7/bits/allocator.h \
+ ../machine/stats.h ../machine/timer.h ../machine/translate.h \
+ ../userprog/bitmap.h ../userprog/threadtable.h ../threads/thread.h \
+ /usr/include/c++/7/vector /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
  /usr/include/c++/7/bits/stl_uninitialized.h \
@@ -2318,9 +2319,9 @@ machine.o: ../machine/machine.cc /usr/include/stdc-predef.h \
  ../userprog/nachostable.h ../userprog/bitmap.h ../filesys/openfile.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/scheduler.h \
  ../threads/list.h ../machine/interrupt.h ../threads/list.h \
- ../machine/stats.h ../machine/timer.h ../userprog/bitmap.h \
- ../userprog/threadtable.h ../threads/thread.h /usr/include/c++/7/vector \
- /usr/include/c++/7/bits/allocator.h \
+ ../machine/stats.h ../machine/timer.h ../machine/translate.h \
+ ../userprog/bitmap.h ../userprog/threadtable.h ../threads/thread.h \
+ /usr/include/c++/7/vector /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
  /usr/include/c++/7/bits/stl_uninitialized.h \
@@ -2430,9 +2431,9 @@ mipssim.o: ../machine/mipssim.cc /usr/include/stdc-predef.h \
  ../userprog/nachostable.h ../userprog/bitmap.h ../filesys/openfile.h \
  ../userprog/syscall.h ../userprog/semtable.h ../threads/scheduler.h \
  ../threads/list.h ../machine/interrupt.h ../threads/list.h \
- ../machine/stats.h ../machine/timer.h ../userprog/bitmap.h \
- ../userprog/threadtable.h ../threads/thread.h /usr/include/c++/7/vector \
- /usr/include/c++/7/bits/allocator.h \
+ ../machine/stats.h ../machine/timer.h ../machine/translate.h \
+ ../userprog/bitmap.h ../userprog/threadtable.h ../threads/thread.h \
+ /usr/include/c++/7/vector /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
  /usr/include/c++/7/bits/stl_uninitialized.h \
@@ -2542,8 +2543,9 @@ translate.o: ../machine/translate.cc /usr/include/stdc-predef.h \
  ../filesys/openfile.h ../userprog/syscall.h ../userprog/semtable.h \
  ../threads/scheduler.h ../threads/list.h ../machine/interrupt.h \
  ../threads/list.h ../machine/stats.h ../machine/timer.h \
- ../userprog/bitmap.h ../userprog/threadtable.h ../threads/thread.h \
- /usr/include/c++/7/vector /usr/include/c++/7/bits/allocator.h \
+ ../machine/translate.h ../userprog/bitmap.h ../userprog/threadtable.h \
+ ../threads/thread.h /usr/include/c++/7/vector \
+ /usr/include/c++/7/bits/allocator.h \
  /usr/include/x86_64-linux-gnu/c++/7/bits/c++allocator.h \
  /usr/include/c++/7/ext/new_allocator.h \
  /usr/include/c++/7/bits/stl_uninitialized.h \
