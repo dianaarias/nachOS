@@ -597,7 +597,7 @@ void ExceptionHandler(ExceptionType which)
           //returnFromSystemCall();
        break;
        case PageFaultException:
-			    //PageFaultCatcher();
+			    PageFaultCatcher();
 			    break;
        default:
           printf( "Unexpected exception %d\n", which );
